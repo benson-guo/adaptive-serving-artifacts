@@ -16,7 +16,7 @@ cleanup() {
     echo "Cleaning up..."
     pgrep python | xargs kill -9
     pgrep vllm | xargs kill -9
-    sleep 2
+    sleep 5
 }
 
 request_rates="1 2 4 8 16 32 64 128 256"
@@ -27,9 +27,8 @@ sleep 5
 for rate in $request_rates; do
     echo "+++++++ Running with request rate: $rate"
     sh benchmark_request_rate_scaling.sh $model_name $rate
-    cleanup
-    sleep 5
 done
+cleanup
 
 echo "+++++++ Running request rate scaling experiments for $model_name with $num_gpus x Tensor Parallelism"
 sh data_parallel.sh $model_name 1 $num_gpus 1
@@ -37,9 +36,8 @@ sleep 5
 for rate in $request_rates; do
     echo "+++++++ Running with request rate: $rate"
     sh benchmark_request_rate_scaling.sh $model_name $rate
-    cleanup
-    sleep 5
 done
+cleanup
 
 echo "+++++++ Running request rate scaling experiments for $model_name with $num_gpus x Pipeline Parallelism"
 sh data_parallel.sh $model_name 1 1 $num_gpus
@@ -47,6 +45,5 @@ sleep 5
 for rate in $request_rates; do
     echo "+++++++ Running with request rate: $rate"
     sh benchmark_request_rate_scaling.sh $model_name $rate
-    cleanup
-    sleep 5
 done
+cleanup

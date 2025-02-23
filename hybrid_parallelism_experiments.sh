@@ -9,13 +9,14 @@ if [ $# -ne 2 ]; then
 fi
 
 model_name=$1
-requeset_rate=$2
+request_rate=$2
 
 # Cleanup function
 cleanup() {
     echo "Cleaning up..."
     pgrep python | xargs kill -9
     pgrep vllm | xargs kill -9
+    sleep 5
 }
 
 configs = [
@@ -44,7 +45,6 @@ for config in "${configs[@]}"; do
     sh benchmark_request_rate_scaling.sh $model_name $request_rate
     
     cleanup
-    sleep 5
     
     echo "Finished experiment with configuration: DP=$dp, TP=$tp, PP=$pp"
     echo "----------------------------------------"
