@@ -19,23 +19,27 @@ cleanup() {
     sleep 2
 }
 
-echo "+++++++ Running request rate scaling experiments for $model_name with $num_gpus x Data Parallelism"
-sh data_parallel.sh $model_name $num_gpus 1 1
-sleep 5
-sh benchmark_request_rate_scaling.sh $model_name "16"
+request_rates = "1 2 4 8 16 32 64 128"
 
-cleanup
 
-echo "+++++++ Running request rate scaling experiments for $model_name with $num_gpus x Tensor Parallelism"
-sh data_parallel.sh $model_name 1 $num_gpus 1
-sleep 5
-sh benchmark_request_rate_scaling.sh $model_name "16"
+for rate in $request_rates; do
+    echo "+++++++ Running request rate scaling experiments for $model_name with $num_gpus x Data Parallelism"
+    sh data_parallel.sh $model_name $num_gpus 1 1
+    sleep 5
+    sh benchmark_request_rate_scaling.sh $model_name $rate
 
-cleanup
+    cleanup
 
-echo "+++++++ Running request rate scaling experiments for $model_name with $num_gpus x Pipeline Parallelism"
-sh data_parallel.sh $model_name 1 1 $num_gpus
-sleep 5
-sh benchmark_request_rate_scaling.sh $model_name "16"
+    echo "+++++++ Running request rate scaling experiments for $model_name with $num_gpus x Tensor Parallelism"
+    sh data_parallel.sh $model_name 1 $num_gpus 1
+    sleep 5
+    sh benchmark_request_rate_scaling.sh $model_name $rate
 
-cleanup
+    cleanup
+
+    echo "+++++++ Running request rate scaling experiments for $model_name with $num_gpus x Pipeline Parallelism"
+    sh data_parallel.sh $model_name 1 1 $num_gpus
+    sleep 5
+    sh benchmark_request_rate_scaling.sh $model_name $rate
+
+done
