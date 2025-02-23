@@ -19,8 +19,7 @@ cleanup() {
     sleep 2
 }
 
-request_rates = "1 2 4 8 16 32 64 128"
-
+request_rates="1 2 4 8 16 32 64 128"
 
 for rate in $request_rates; do
     echo "+++++++ Running request rate scaling experiments for $model_name with $num_gpus x Data Parallelism"
