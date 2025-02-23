@@ -1,13 +1,20 @@
 #!/bin/bash
-# This file demonstrates the example usage of disaggregated prefilling
-# We will launch 2 vllm instances (1 for prefill and 1 for decode),
-# and then transfer the KV cache between them.
 
-# Define the model name as a command line argument with a default value
-model_name=${1:-facebook/opt-125m}
-echo "Serving model name: $model_name"
-
-echo "🚧🚧 Warning: The usage of disaggregated prefill is experimental and subject to change 🚧🚧"
+# Check if 4 parameters are provided
+if [ $# -eq 4 ]; then
+    # Define the model name, dp_degree, tp_degree, and pp_degree as command line arguments
+    model_name=$1
+    dp_degree=$2
+    tp_degree=$3
+    pp_degree=$4
+    echo "Serving model name: $model_name"
+    echo "Data Parallel Degree: $dp_degree"
+    echo "Tensor Parallel Degree: $tp_degree"
+    echo "Pipeline Parallel Degree: $pp_degree"
+else
+    echo "Error: Please provide exactly 4 parameters: model_name, dp_degree, tp_degree, and pp_degree."
+    exit 1
+fi
 sleep 1
 
 # Trap the SIGINT signal (triggered by Ctrl+C)
@@ -23,16 +30,6 @@ cleanup() {
     exit 0
 }
 
-export VLLM_HOST_IP=$(hostname -I | awk '{print $1}')
-
-# install quart first -- required for disagg prefill proxy serve
-if python3 -c "import quart" &> /dev/null; then
-    echo "Quart is already installed."
-else
-    echo "Quart is not installed. Installing..."
-    python3 -m pip install quart
-fi 
-
 # a function that waits vLLM server to start
 wait_for_server() {
   local port=$1
@@ -42,28 +39,41 @@ wait_for_server() {
     done" && return 0 || return 1
 }
 
-# You can also adjust --kv-ip and --kv-port for distributed inference.
+# Launch vLLM instances for data parallel serving
+i=0
+while [ $i -lt $dp_degree ]; do
+    # Calculate GPU device IDs for this instance
+    gpu_ids=""
+    start_gpu=$((i * pp_degree * tp_degree))
+    j=0
+    while [ $j -lt $((pp_degree * tp_degree)) ]; do
+        if [ -n "$gpu_ids" ]; then
+            gpu_ids="${gpu_ids},"
+        fi
+        gpu_ids="${gpu_ids}$((start_gpu + j))"
+        j=$((j + 1))
+    done
 
-# prefilling instance, which is the KV producer
-# --dtype float16 \
-CUDA_VISIBLE_DEVICES=0 vllm serve $model_name \
-    --port 8100 \
-    --max-model-len 2048 \
-    --pipeline-parallel-size 1 \
-    --tensor-parallel-size 1 \
-    --gpu-memory-utilization 0.9 &
+    # Launch vLLM instance
+    port=$((8100 + i*100))
+    CUDA_VISIBLE_DEVICES=$gpu_ids vllm serve $model_name \
+        --port $port \
+        --pipeline-parallel-size $pp_degree \
+        --tensor-parallel-size $tp_degree \
+        --disable-log-request \
+        --gpu-memory-utilization 0.9 &
+    
+    echo "Launched vLLM instance $((i+1)) on GPUs: $gpu_ids port: $port"
+    i=$((i + 1))
+done
 
-# decoding instance, which is the KV consumer
-# CUDA_VISIBLE_DEVICES=1 vllm serve $model_name \
-#     --port 8200 \
-#     --max-model-len 2048 \
-#     --pipeline-parallel-size 1 \
-#     --tensor-parallel-size 1 \
-#     --gpu-memory-utilization 0.9 &
-
-# wait until prefill and decode instances are ready
-wait_for_server 8100
-wait_for_server 8200
+# Wait for all instances to be ready
+i=0
+while [ $i -lt $dp_degree ]; do
+    port=$((8100 + i*100))
+    wait_for_server $port
+    i=$((i + 1))
+done
 
 # launch a proxy server that opens the service at port 8000
 # the workflow of this proxy:
@@ -73,7 +83,7 @@ wait_for_server 8200
 #   instance
 # NOTE: the usage of this API is subject to change --- in the future we will 
 # introduce "vllm connect" to connect between prefill and decode instances
-python3 ./benchmarks/round_robin_proxy.py &
+python3 ./benchmarks/round_robin_proxy.py --num_servers $dp_degree &
 sleep 1
 
 # serve two example requests
@@ -98,6 +108,7 @@ output2=$(curl -X POST -s http://localhost:8000/v1/completions \
 
 # Cleanup commands
 # pgrep python | xargs kill -9
+# pgrep vllm | xargs kill -9 
 # pkill -f python
 
 echo ""
@@ -111,6 +122,3 @@ echo "Output of second request: $output2"
 
 echo "🎉🎉 Successfully finished 2 test requests! 🎉🎉"
 echo ""
-
-
-sleep 1000 

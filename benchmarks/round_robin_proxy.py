@@ -40,8 +40,13 @@ class RoundRobinProxy:
                 return web.Response(text=f"Error: {str(e)}", status=500)
 
 
-async def main():
-    proxy = RoundRobinProxy([8100, 8200])
+async def main(args):
+    server_ports = []
+    for i in range(args.num_servers):
+        port = 8100 + i * 100
+        server_ports.append(port)
+    print(f"Starting {args.num_servers} servers on ports {server_ports}")
+    proxy = RoundRobinProxy(server_ports)
     app = web.Application()
     app.router.add_route('*', '/{path:.*}', proxy.handle_request)
 
@@ -57,4 +62,10 @@ async def main():
 
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--num_servers', type=int, default=2,
+                       help='Number of backend servers to load balance between')
+    args = parser.parse_args()
+    asyncio.run(main(args))
+
