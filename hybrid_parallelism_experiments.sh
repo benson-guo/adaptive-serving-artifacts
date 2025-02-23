@@ -36,7 +36,7 @@ for config in "${configs[@]}"; do
     # Split the config string into individual values
     read -r dp tp pp <<< "$config"
     
-    echo ">> Running experiment with configuration: DP=$dp, TP=$tp, PP=$pp"
+    echo "+++++++ Running experiment with configuration: DP=$dp, TP=$tp, PP=$pp"
     
     # Run the experiment with current configuration
     sh data_parallel.sh $model_name $dp $tp $pp
