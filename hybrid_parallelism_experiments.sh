@@ -40,9 +40,11 @@ for config in "${configs[@]}"; do
     
     # Run the experiment with current configuration
     sh data_parallel.sh $model_name $dp $tp $pp
+    sleep 5
     sh benchmark_request_rate_scaling.sh $model_name $request_rate
     
     cleanup
+    sleep 5
     
     echo "Finished experiment with configuration: DP=$dp, TP=$tp, PP=$pp"
     echo "----------------------------------------"
