@@ -61,6 +61,7 @@ while [ $i -lt $dp_degree ]; do
         --pipeline-parallel-size $pp_degree \
         --tensor-parallel-size $tp_degree \
         --disable-log-request \
+        --max_model_len 16384 \
         --gpu-memory-utilization 0.9 &
     
     echo "Launched vLLM instance $((i+1)) on GPUs: $gpu_ids port: $port"
