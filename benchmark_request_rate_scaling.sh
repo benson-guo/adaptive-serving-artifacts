@@ -19,6 +19,6 @@ for rate in $request_rates; do
         --model $model_name \
         --dataset-name sharegpt \
         --dataset-path ~/data/ShareGPT_V3_unfiltered_cleaned_split.json \
-        --num-prompts 128 \
+        --num-prompts 512 \
         --request-rate $rate
 done
