@@ -9,7 +9,7 @@ if [ $# -ne 2 ]; then
 fi
 
 model_name=$1
-request_rate=$2
+request_rates=$2
 
 # Cleanup function
 cleanup() {
@@ -19,7 +19,7 @@ cleanup() {
     sleep 5
 }
 
-configs = [
+configs = (
     "8 1 1",
     "4 2 1",
     "4 1 2",
@@ -30,7 +30,7 @@ configs = [
     "1 1 8"
     "1 4 2"
     "1 2 4"
-]
+)
 
 # Loop through each parallelism configuration
 for config in "${configs[@]}"; do
@@ -42,7 +42,12 @@ for config in "${configs[@]}"; do
     # Run the experiment with current configuration
     sh data_parallel.sh $model_name $dp $tp $pp
     sleep 5
-    sh benchmark_request_rate_scaling.sh $model_name $request_rate
+    
+    # Loop through each request rate
+    for rate in $request_rates; do
+        echo "+++++++ Running with request rate: $rate"
+        sh benchmark_request_rate_scaling.sh $model_name $rate
+    done
     
     cleanup
     
