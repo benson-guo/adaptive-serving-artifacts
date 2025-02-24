@@ -25,7 +25,7 @@ def parse_benchmark_results(file_path):
             continue
         
         # Match Request throughput
-        throughput_match = re.match(r"Request throughput \(req/s\):\s+([\d\.]+)", line)
+        throughput_match = re.match(r"Total Token throughput \(tok/s\):\s+([\d\.]+)", line)
         if throughput_match:
             request_throughput = float(throughput_match.group(1))
             continue
@@ -78,7 +78,7 @@ def parse_benchmark_results(file_path):
         plt.ylim(bottom=0, top=max(1.15 * min(d[5] for d in filtered_data), 1000))
         
         # Labels and title
-        plt.xlabel("Throughput (requests/s)", fontsize=16)
+        plt.xlabel("Throughput (Tokens)", fontsize=16)
         plt.ylabel("Latency (ms)", fontsize=16)
         # plt.title(f"Throughput vs. Latency (Request Rate={request_rate})")
         plt.grid(True)
